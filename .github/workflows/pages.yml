@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     permissions:
+      actions: read
       pages: write
       id-token: write
     environment:
@@ -43,8 +44,28 @@ jobs:
           cp install.sh install.ps1 _site/
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        id: upload
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: _site
           retention-days: 1
+      - name: Wait for the uploaded artifact to appear in the run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAGE_ARTIFACT: github-pages-${{ github.run_attempt }}
+          PAGE_ARTIFACT_ID: ${{ steps.upload.outputs.artifact_id }}
+        run: |
+          set -euo pipefail
+          [[ "$PAGE_ARTIFACT_ID" =~ ^[0-9]+$ ]]
+          path="repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?name=$PAGE_ARTIFACT"
+          for attempt in {1..20}; do
+            visible=$(gh api "$path" --jq '.artifacts[] | select(.expired == false) | .id')
+            [[ "$visible" != "$PAGE_ARTIFACT_ID" ]] || exit 0
+            sleep 3
+          done
+          echo 'The uploaded Pages artifact did not appear in this run.' >&2
+          exit 1
       - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
         id: deployment
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
