@@ -35,13 +35,16 @@ jobs:
           repository: opencrude/crude
           ref: ${{ inputs.ref }}
           persist-credentials: false
-      # The site is published exactly as committed. The two installers keep
-      # their canonical addresses at the site root.
+      # The site is published exactly as committed. linux.sh and windows.ps1
+      # run the installer of the latest release. Released builds still tell
+      # users to update with install.sh and install.ps1, so those names serve
+      # the same two files.
       - name: Assemble the published directory
         run: |
           mkdir -p _site
           cp -a site/. _site/
-          cp install.sh install.ps1 _site/
+          cp site/linux.sh _site/install.sh
+          cp site/windows.ps1 _site/install.ps1
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         id: upload
